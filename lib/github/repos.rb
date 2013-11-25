@@ -51,6 +51,7 @@ module GitHubBackup
             def fetch_changes(repo)
                 Dir.chdir(repo['repo_path']) 
                 %x{git fetch origin}
+                %x{git pull origin}
             end
             
             def get_forks(repo)
