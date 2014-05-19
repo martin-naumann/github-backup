@@ -35,7 +35,7 @@ module GitHubBackup
 
                 repo['repo_path'] = "#{opts[:bakdir]}/#{repo['name']}"
 
-                clone repo unless File.exists?(repo['repo_path'])
+                clone repo
                 fetch_changes repo
                 get_forks repo if opts[:forks] and repo['forks'] > 1
                 create_all_branches repo if opts[:init_branches]
@@ -45,7 +45,11 @@ module GitHubBackup
             end
 
             def clone(repo)
-                %x{git clone #{repo['ssh_url']}}
+                if File.exists?(repo['repo_path'])
+                    %x{cd #{repo['repo_path']} && git pull origin && cd ..}
+                else
+                    %x{git clone #{repo['ssh_url']}}
+                end
             end
 
             def fetch_changes(repo)
@@ -65,12 +69,15 @@ module GitHubBackup
                       url = "/repos/#{opts[:username]}/#{repo['name']}/forks"
                     end
                     forks = json("#{url}?page=#{i}&per_page=100")
-                    pp forks
                     forks.each do |f|
-                      puts "Adding remote #{f['owner']['login']} from #{f['ssh_url']}.."
+                        puts "Adding remote #{f['owner']['login']} from #{f['ssh_url']}.."
                         %x{git remote add #{f['owner']['login']} #{f['ssh_url']} 2> /dev/null}
                         %x{git fetch #{f['owner']['login']}}
-                        %x{cd .. && git clone #{f['ssh_url']} #{f['owner']['login']}__#{repo['name']}}
+                        if File.exists?("../#{f['owner']['login']}__#{repo['name']}")
+                            %x{cd ../#{f['owner']['login']}__#{repo['name']} && git pull origin}
+                        else
+                            %x{cd .. && git clone #{f['ssh_url']} #{f['owner']['login']}__#{repo['name']}}
+                        end
                     end
                     break if forks.size == 0
                 end
