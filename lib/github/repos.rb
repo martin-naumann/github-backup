@@ -43,17 +43,17 @@ module GitHubBackup
                 dump_wiki repo if opts[:wiki] && repo['has_wiki']
                 repack repo if opts[:repack]
             end
-            
+
             def clone(repo)
                 %x{git clone #{repo['ssh_url']}}
             end
 
             def fetch_changes(repo)
-                Dir.chdir(repo['repo_path']) 
+                Dir.chdir(repo['repo_path'])
                 %x{git fetch origin}
                 %x{git pull origin}
             end
-            
+
             def get_forks(repo)
                 Dir.chdir(repo['repo_path'])
 
@@ -68,16 +68,17 @@ module GitHubBackup
                     pp forks
                     forks.each do |f|
                       puts "Adding remote #{f['owner']['login']} from #{f['ssh_url']}.."
-                        %x{git remote add #{f['owner']['login']} #{f['ssh_url']}}
+                        %x{git remote add #{f['owner']['login']} #{f['ssh_url']} 2> /dev/null}
                         %x{git fetch #{f['owner']['login']}}
+                        %x{cd .. && git clone #{f['ssh_url']} #{f['owner']['login']}__#{repo['name']}}
                     end
                     break if forks.size == 0
                 end
             end
 
             def create_all_branches(repo)
-                Dir.chdir(repo['repo_path']) 
-                %x{for remote in `git branch -r`; do git branch --track $remote; done}
+                Dir.chdir(repo['repo_path'])
+                %x{for remote in `git branch -r`; do git branch --track $remote 2> /dev/null; done}
             end
 
             def dump_issues(repo)
