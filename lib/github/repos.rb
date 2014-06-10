@@ -35,7 +35,7 @@ module GitHubBackup
 
                 repo['repo_path'] = "#{opts[:bakdir]}/#{repo['name']}"
 
-                clone repo
+                clone repo unless File.exists?(repo['repo_path'])
                 fetch_changes repo
                 get_forks repo if opts[:forks] and repo['forks'] > 1
                 create_all_branches repo if opts[:init_branches]
@@ -45,20 +45,19 @@ module GitHubBackup
             end
 
             def clone(repo)
-                if File.exists?(repo['repo_path'])
-                    %x{cd #{repo['repo_path']} && git pull origin && cd ..}
-                else
-                    %x{git clone #{repo['ssh_url']}}
-                end
+                puts "Cloning #{repo['name']}..."
+                %x{git clone #{repo['ssh_url']}}
             end
 
             def fetch_changes(repo)
+                puts "Updating #{repo['name']}..."
                 Dir.chdir(repo['repo_path'])
                 %x{git fetch origin}
                 %x{git pull origin}
             end
 
             def get_forks(repo)
+                puts "Getting forks for #{repo['name']}..."
                 Dir.chdir(repo['repo_path'])
 
                 # do we get all forks
@@ -84,11 +83,13 @@ module GitHubBackup
             end
 
             def create_all_branches(repo)
+                puts "Creating branches for #{repo['name']}..."
                 Dir.chdir(repo['repo_path'])
                 %x{for remote in `git branch -r`; do git branch --track $remote 2> /dev/null; done}
             end
 
             def dump_issues(repo)
+                puts "Dumping issues for #{repo['name']}..."
                 Dir.chdir(repo['repo_path'])
 
                 filename = repo['repo_path'] + "/issues_dump.txt"
@@ -110,6 +111,7 @@ module GitHubBackup
             end
 
             def dump_wiki(repo)
+                puts "Dumping wiki for #{repo['name']}..."
                 Dir.chdir(opts[:bakdir])
                 wiki_path = "#{opts[:bakdir]}/#{repo['name']}.wiki"
                 %x{git clone git@github.com:#{repo['owner']['login']}/#{repo['name']}.wiki.git} unless File.exists?(wiki_path)
